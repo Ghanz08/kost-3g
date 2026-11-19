@@ -1,0 +1,39 @@
+# Salinan /home/civo/kost3g-supabase/docker-compose.override.yml (Supabase khusus Kost 3g).
+# Stack-nya: compose resmi Supabase self-hosted + override ini. Secret ada di .env di VPS, tidak di repo.
+# Hanya gateway yang dibuka, di 127.0.0.1:8100 (API_GW_HTTP_PORT); Caddy meneruskan /auth/v1 dan galeri publik.
+services:
+  studio:
+    container_name: kost3g-supabase-studio
+  api-gw:
+    container_name: kost3g-supabase-gateway
+  auth:
+    container_name: kost3g-supabase-auth
+    environment:
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true"
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${KOST3G_GOOGLE_CLIENT_ID:-}
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${KOST3G_GOOGLE_SECRET:-}
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
+  rest:
+    container_name: kost3g-supabase-rest
+  storage:
+    container_name: kost3g-supabase-storage
+    depends_on: !override
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+  meta:
+    container_name: kost3g-supabase-meta
+  db:
+    container_name: kost3g-supabase-db
+  # Tidak dipakai kos: realtime, edge functions, pooler, transformasi gambar.
+  realtime:
+    profiles: ["tidak-dipakai"]
+  functions:
+    profiles: ["tidak-dipakai"]
+  supavisor:
+    profiles: ["tidak-dipakai"]
+  imgproxy:
+    profiles: ["tidak-dipakai"]

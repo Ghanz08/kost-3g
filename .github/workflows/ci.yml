@@ -1,0 +1,64 @@
+# Alur: push ke dev = CI saja (lint, tipe, tes; tidak menyentuh VPS). Pull request dev -> main menjalankan CI yang sama.
+# Merge ke main = CI lagi, lalu deploy ke VPS (setelah disetujui pemilik, lihat docs/ci-cd.md).
+# Build image TIDAK dilakukan di runner: `next build` membaca Supabase kos saat prerender dan Supabase itu tidak dibuka ke
+# internet, jadi build terjadi di VPS (deploy/release.sh) dan otomatis kembali ke versi lama bila tidak sehat.
+# Rahasia (Environment "production"): VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_KNOWN_HOSTS.
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch: # deploy ulang main secara manual (juga untuk rollback: pilih commit lama lewat revert PR)
+
+# Cabang biasa: run lama dibatalkan oleh push baru. main: tidak pernah dibatalkan (deploy yang jalan harus selesai).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1 (versi pnpm dari packageManager)
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Skrip shell
+        run: bash -n deploy/release.sh && bash -n deploy/ci-gateway.sh && bash -n deploy/deploy.sh
+
+  deploy:
+    needs: check
+    # Aktif setelah variabel repo DEPLOY_ENABLED=true dan rahasia VPS_* ada. Hanya main.
+    if: vars.DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    # Satu deploy pada satu waktu, dan deploy yang berjalan tidak dibatalkan (VPS bisa setengah terbarui).
+    concurrency: { group: deploy-production, cancel-in-progress: false }
+    # Environment menyimpan rahasia VPS_* dan reviewer wajib: pemilik menyetujui tiap deploy.
+    environment: production
+    env:
+      VPS_TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Kunci SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host *\n  StrictHostKeyChecking yes\n  IdentitiesOnly yes\n' > ~/.ssh/config
+      - name: Kirim kode (commit ini saja)
+        run: git archive --format=tar HEAD | ssh "$VPS_TARGET" ship
+      - name: Build, jalankan, uji sehat (kembali otomatis bila gagal)
+        run: ssh "$VPS_TARGET" "release ${{ github.sha }}"

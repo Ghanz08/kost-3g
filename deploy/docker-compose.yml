@@ -1,0 +1,27 @@
+# Kost 3g di VPS ghani-main. Jaringan host: app mendengar di 127.0.0.1:3100 (di belakang Caddy Glideslope)
+# dan memanggil Supabase lewat 127.0.0.1:8100 tanpa membuka API ke internet.
+services:
+  web:
+    build:
+      context: ..
+      network: host
+      args:
+        NEXT_PUBLIC_SITE_URL: https://kost3g.ghanizulhusni.space
+        NEXT_PUBLIC_SUPABASE_URL: https://supabase.ghanizulhusni.space
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
+    image: kost3g-web:latest
+    container_name: kost3g-web
+    network_mode: host
+    restart: unless-stopped
+    # Berisi NEXT_PUBLIC_SUPABASE_ANON_KEY dan SUPABASE_SERVICE_ROLE_KEY. Tidak di-commit.
+    env_file: ./kost3g.env
+    environment:
+      SUPABASE_URL: http://127.0.0.1:8100
+      NEXT_PUBLIC_SITE_URL: https://kost3g.ghanizulhusni.space
+      NEXT_PUBLIC_SUPABASE_URL: https://supabase.ghanizulhusni.space
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3100/robots.txt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,24 @@
+# Tambahkan ke /home/civo/glideslope/app/deploy/Caddyfile (Caddy Glideslope melayani semua domain di VPS ini).
+
+kost3g.ghanizulhusni.space {
+	encode zstd gzip
+	request_body {
+		max_size 12MB
+	}
+	reverse_proxy 127.0.0.1:3100
+}
+
+# Supabase khusus kos (/home/civo/kost3g-supabase) hanya dibuka sebagian: login (auth) dan foto galeri publik. REST, storage privat, dan Studio tetap tertutup.
+supabase.ghanizulhusni.space {
+	@auth path /auth/v1/*
+	handle @auth {
+		reverse_proxy 127.0.0.1:8100
+	}
+	@galeri path /storage/v1/object/public/kost-public/*
+	handle @galeri {
+		reverse_proxy 127.0.0.1:8100
+	}
+	handle {
+		respond 404
+	}
+}

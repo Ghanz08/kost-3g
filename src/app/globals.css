@@ -1,0 +1,332 @@
+@import "tailwindcss";
+
+/* Token warna & spacing diambil dari Design System di Figma (file "Kost 3g"). */
+@theme {
+  --color-brand-50: #e7edea;
+  --color-brand-200: #ccd9d4;
+  --color-brand-500: #346854;
+  --color-brand-700: #224437;
+  --color-accent-50: #fff0d9;
+  --color-accent-500: #fe9d00;
+  --color-accent-700: #8c5600;
+  --color-navy-700: #363b64;
+  --color-navy-900: #232641;
+  --color-paper: #e8eee3;
+  --color-surface: #ffffff;
+  --color-filled: #e3e8df;
+  --color-line: #d3dbcf;
+  --color-muted: #646b62;
+  --color-subtle: #5a5f6e;
+  --color-ink: #1f2430;
+  /* Garis tepi kolom isian: 3,9:1 terhadap putih (WCAG 1.4.11 butuh 3:1). */
+  --color-field: #7a8378;
+  /* Grafik admin: lolos validator palet (CVD ΔE 8,0; kontras ≥ 3:1 di putih). */
+  --color-chart-1: #16855a;
+  --color-chart-2: #d97706;
+
+  --radius-card: 1.25rem;
+  --shadow-card: 0 2px 8px rgb(35 38 65 / 0.08);
+  --shadow-raised: 0 8px 24px rgb(35 38 65 / 0.12);
+  --shadow-sticky: 0 -4px 16px rgb(35 38 65 / 0.1);
+
+  --animate-door-open: door-open 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) 1500ms both;
+  --animate-tag-in: tag-in 600ms cubic-bezier(0.34, 1.56, 0.64, 1) 2300ms both;
+  --animate-glow: glow 3.2s ease-in-out 2200ms infinite both;
+  --animate-knock: knock 2.8s ease-in-out 1s infinite;
+  --animate-sway: sway 5s ease-in-out 3.8s infinite;
+  --animate-march: march 1.2s linear infinite;
+  --animate-ping-soft: ping-soft 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-jakarta), ui-sans-serif, sans-serif;
+}
+
+/* Skala tipografi yang menyesuaikan lebar layar. */
+@utility text-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.75rem, 1.4rem + 4.4vw, 4.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+@utility text-h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.875rem, 1.35rem + 1.8vw, 2.875rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+@utility text-h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+@utility text-price {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.75rem, 1.5rem + 0.8vw, 2.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+/* Keyframe ditaruh di luar @theme supaya selalu ikut ter-build, juga dipakai animasi berbasis scroll. */
+@keyframes door-open {
+  from {
+    transform: perspective(500px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(500px) rotateY(-68deg);
+  }
+}
+@keyframes tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+/* Cahaya hangat dari kamar kosong, seperti lampu yang menyala. */
+@keyframes glow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+/* Tok, tok: pintu digoyang sebentar lalu diam. */
+@keyframes knock {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  64%,
+  72% {
+    transform: rotate(-5deg);
+  }
+  68%,
+  76% {
+    transform: rotate(4deg);
+  }
+}
+/* Papan nama tertiup angin. 0% dan 100% lurus, jadi dengan kurangi gerakan papan diam tegak. */
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  30% {
+    transform: rotate(1.6deg);
+  }
+  70% {
+    transform: rotate(-1.4deg);
+  }
+}
+@keyframes march {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+@keyframes ping-soft {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Pintu yang terbuka mengikuti scroll. Browser tanpa dukungan langsung menampilkan pintu terbuka. */
+@utility animate-door-scroll {
+  transform: perspective(500px) rotateY(-68deg);
+  @supports (animation-timeline: view()) {
+    animation: door-open linear both;
+    animation-timeline: view();
+    animation-range: entry 15% cover 50%;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/*
+ * Animasi masuk di bagian atas halaman dijalankan CSS, bukan JavaScript: teks langsung tampil saat
+ * halaman dicat, tidak menunggu hidrasi (itu yang membuat LCP seluler 3-4 detik). Tampilannya sama
+ * dengan versi Motion: kurva, durasi, dan jeda antar kata dipertahankan. Kurang gerakan: lihat aturan global di bawah.
+ */
+@keyframes word-rise {
+  from {
+    transform: translateY(105%) rotate(6deg);
+  }
+}
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translate(var(--rx, 0px), var(--ry, 28px));
+    filter: blur(6px);
+  }
+}
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+@utility animate-word {
+  animation: word-rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0s) + var(--i, 0) * 70ms);
+}
+@utility animate-reveal {
+  animation: reveal-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
+}
+@utility animate-hero-in {
+  animation: hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
+}
+
+/* Garis progres baca di bawah header. */
+@utility animate-scroll-progress {
+  transform: scaleX(0);
+  @supports (animation-timeline: scroll()) {
+    animation: grow-x linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+@layer base {
+  html {
+    /* Layar besar: seluruh layout membesar proporsional. 16px sampai lebar 1440px, naik pelan,
+       maksimal 22px (sekitar 2560px). Ada suku rem supaya zoom dan ukuran huruf pilihan pengguna tetap berlaku. */
+    font-size: clamp(100%, 0.375rem + 0.6875vw, 137.5%);
+    interpolate-size: allow-keywords;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+  ::selection {
+    @apply bg-accent-500 text-navy-900;
+  }
+  /* Akordeon FAQ membuka dengan mulus (browser lama: langsung terbuka). */
+  details::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 350ms cubic-bezier(0.22, 1, 0.36, 1),
+      content-visibility 350ms allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+  }
+  /* Cincin fokus dua warna: navy terlihat di latar terang, garis putih di dalamnya terlihat di latar gelap.
+     Oranye sebelumnya hanya 2:1 terhadap putih (WCAG 1.4.11 butuh 3:1). */
+  :focus-visible {
+    outline: 3px solid var(--color-navy-700);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-surface);
+    border-radius: 6px;
+  }
+}
+
+/* Pindah halaman. Maju: halaman lama mundur ke belakang, halaman baru naik masuk lewat pintu.
+   Kembali: kebalikannya. Header tetap diam sebagai patokan. */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+::view-transition-old(.nav-forward) {
+  animation: 260ms cubic-bezier(0.4, 0, 1, 1) both page-recede;
+}
+::view-transition-new(.nav-forward) {
+  animation: 620ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both page-enter;
+}
+::view-transition-old(.nav-back) {
+  animation: 260ms cubic-bezier(0.4, 0, 1, 1) both page-leave;
+}
+::view-transition-new(.nav-back) {
+  animation: 620ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both page-return;
+}
+@keyframes page-recede {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(4px);
+  }
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+    clip-path: inset(18% 30% 0 30% round 50vw 50vw 0 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0 round 0 0 0 0);
+  }
+}
+@keyframes page-leave {
+  to {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(4px);
+  }
+}
+@keyframes page-return {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
